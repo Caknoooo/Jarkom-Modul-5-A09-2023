@@ -73,7 +73,7 @@ Disini kami dari kelompok **A09** akan membuat laporan resmi pada Praktikum Jark
 Kelompok kami memiliki prefix IP ``192.173``
 
 ## Rute
-Berikut adalah Rute yang telah kami buat dari hasil [VLSM](#vlsm) sebagai berikut 
+Berikut adalah Rute yang telah kami buat dari hasil [Topologi VLSM](#topologi-vlsm) sebagai berikut 
 
 ![image](https://github.com/Caknoooo/Jarkom-Modul-4-A09-2023/assets/92671053/a889600d-b35e-4f3c-8608-68a7a32a1f08)
 
@@ -81,7 +81,7 @@ Berikut adalah Rute yang telah kami buat dari hasil [VLSM](#vlsm) sebagai beriku
 ## Persiapan 
 
 ### Tree
-Tree yang kami buat didapatkan dari hasil pengelompokkan [VLSM](#vlsm) sebagai berikut 
+Tree yang kami buat didapatkan dari hasil pengelompokkan [Topologi VLSM](#topologi-vlsm) sebagai berikut 
 
 ![VLSM Mod 5 A09](https://github.com/Caknoooo/Jarkom-Modul-4-A09-2023/assets/92671053/3a104619-090e-479a-bbc0-3da1ac7e27ae)
 
