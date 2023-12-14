@@ -315,6 +315,7 @@ Disini yang bertindak sebagai ``DNS Server`` adalah router ``Richter`` dan akan 
 echo 'nameserver 192.168.122.1' >/etc/resolv.conf
 
 apt update
+apt install netcat -y
 apt install bind9 -y
 
 echo '
@@ -338,6 +339,7 @@ Setelah berhasil melakukan setup untuk ``DNS Server``. Sekarang kami berpindah u
 echo 'nameserver 192.168.122.1' > /etc/resolv.conf
 
 apt update
+apt install netcat -y
 apt install isc-dhcp-server -y
 
 echo 'INTERFACESv4="eth0"' > /etc/default/isc-dhcp-server
@@ -426,6 +428,7 @@ Sehingga disini kita perlu untuk melakukan ``konfigurasi`` pada router yang berd
 echo 'nameserver 192.168.122.1' > /etc/resolv.conf
 
 apt update
+apt install netcat -y
 apt install isc-dhcp-relay -y
 
 echo '
@@ -450,8 +453,32 @@ Pada ``web server`` kami akan menggunakan ``apache2`` dan akan dikonfigurasikan 
 echo 'nameserver 192.168.122.1' > /etc/resolv.conf
 
 apt update
+apt install netcat -y
 apt install apache2 -y
 service apache2 start
+
+echo '# If you just change the port or add more ports here, you will likely also
+# have to change the VirtualHost statement in
+# /etc/apache2/sites-enabled/000-default.conf
+
+Listen 80
+Listen 443
+
+<IfModule ssl_module>
+        Listen 443
+</IfModule>
+
+<IfModule mod_gnutls.c>
+        Listen 443
+</IfModule>
+
+# vim: syntax=apache ts=4 sw=4 sts=4 sr noet' > /etc/apache2/ports.conf
+```
+
+Lalu pada ``/var/www/html/index.html`` di masing-masing node ``Sein`` ataupun ``Start`` tambahkan berikut:
+```
+echo '# Sein | Stark
+Sein | Stark nih' > /var/www/html/index.html
 ```
 
 ### Client 
@@ -459,6 +486,7 @@ Untuk masing-masing client, kita hanya perlu install ``lynx`` karena akan diguna
 
 ```sh
 apt update
+apt install netcat -y
 apt install lynx -y
 ```
 
@@ -467,60 +495,204 @@ apt install lynx -y
 Setelah berhasil melakukan [Konfigurasi](#konfigurasi) seperti diatas, sekarang jangan lupa untuk melakukan ``restart (stop lalu start lagi)`` pada router ``Aura`` karena akan digunakan pada [Soal 1](#soal-1)
  
 ## Soal 1
+> Agar topologi yang kalian buat dapat mengakses keluar, kalian diminta untuk mengkonfigurasi Aura menggunakan iptables, tetapi tidak ingin menggunakan MASQUERADE.
 
 ### Script 
+Ada 2 opsi untuk mengerjakan ``soal`` ini. Yang pertama dari awal langsung dilakukan setup tanpa ``MASQUERADE`` yang kedua bisa langsung tanpa ``MASQUERADE``. Jika memilih opsi yang pertama, maka anda harus melakukan ``restart`` pada node ``Aura`` memastikan bahwa `iptables` sebelumnya sudah tidak ada.  Jika menggunakan cara yang kedua maka tidak perlu untuk melakukan ``restart`` pada node ``Aura``.
+
+Dengan menggunakan cara yang kedua, dilakukan konfigurasi agar topologi dapat mengakses internet keluar (NAT). Tanpa MASQUERADE, konfigurasi dilakukan dengan memanfaatkan scripting sederhana, yaitu dengan menggunakan ``SNAT --to-source`` yang mengarah pada NID dari router yang berhubungan dengan NAT, yaitu **192.173.0.0/20**. Dengan kata lain, ``IP`` tesebut adalah IP terluar / terjauh yang mencakup seluruh ``IP`` yang kita peroleh sebelumnya.
+
+Namun, sebelumnya perlu definisikan ``interface`` mana yang terkoneksi dengan NAT. Pada kasus ini adalah ``Aura``, interface yang berhubungan adalah ``eth0``. Definisi tersebut dapat dimasukkan ke dalam sebuah variabel. Di sini, digunakan variabel bernama ``IPETH0``.
+
+```sh
+# No 1 (Aura)
+IPETH0="$(ip -br a | grep eth0 | awk '{print $NF}' | cut -d'/' -f1)"
+iptables -t nat -A POSTROUTING -o eth0 -j SNAT --to-source "$IPETH0" -s 192.173.0.0/20
+```
 
 ### Testing
+Akan dilakukan 2 testing disini, yaitu sebelum dimasukkanya ``iptables``, dan sesudah dimasukkannya ``iptables``. Disini bebas menggunakan ``node`` apa saja untuk testing. Kami menggunakan ``Richter`` untuk testingnya.
+
+**Sebelum**
+
+![image](https://github.com/Caknoooo/information-security-be/assets/92671053/ac266d7f-a70a-4713-993d-3d6c6723094e)
+
+**Sesudah**
+
+![image](https://github.com/Caknoooo/information-security-be/assets/92671053/8465b6ee-a24b-491e-bc6b-f312a2bbb656)
 
 ## Soal 2
+> Kalian diminta untuk melakukan drop semua TCP dan UDP kecuali port 8080 pada TCP.
 
 ### Script 
+Untuk melakukan filtering terhadap ``tcp`` dan ``udp`` dan diizinkannya port ``8080`` yang hanya dapat mengakses nya. Maka diperlukan untuk `mendefinisikan` definisi dari ``IP Address`` serta port ``8080``. Berikut merupakan perintah ``sh`` pada node ``Revolte``
+
+```sh
+iptables -A INPUT -p tcp --dport 8080 -j ACCEPT
+iptables -A INPUT -p tcp -j DROP
+iptables -A INPUT -p udp -j DROP
+```
+
+**Penjelasan**
+- ``-A INPUT``: Menambahkan aturan ke chain INPUT (rantai yang digunakan untuk lalu lintas yang menuju ke sistem).
+- ``-p tcp``: Menentukan protokol yang digunakan, dalam hal ini TCP. --dport 8080: Menentukan port tujuan, dalam hal ini port 8080.
+- ``-j ACCEPT``: Menentukan tindakan yang diambil jika paket memenuhi kriteria aturan, dalam hal ini menerima paket.
+- ``-j DROP``: Menentukan tindakan yang diambil jika paket memenuhi kriteria aturan, dalam hal ini menolak (DROP) paket.
+
+Jadi, aturan ini memungkinkan lalu lintas TCP yang menuju ke port 8080 untuk diterima.
 
 ### Testing
+Disini akan dilakukan testing terhadap ``client`` yang akan menuju ``Revolte`` dan dilakukan sebanyak 2 kali (Sukses dan Gagal) dengan bantuan ``netcat``
+
+**Sukses**
+
+Disini akan digunakan port ``8080`` pada koneksi ``tcp``
+
+![image](https://github.com/Caknoooo/information-security-be/assets/92671053/e986af07-9cda-4b5f-a5d7-335100079954)
+
+**Gagal** 
+
+Karena port ``8080`` pada UDP juga tidak di blok, jadi tidak akan saling terkoneksi
+
+![image](https://github.com/Caknoooo/information-security-be/assets/92671053/fc7c8068-211b-4d84-9105-b741c1b39cc6)
+
+port yang lain (yang di blok) -> contoh port ``3000`` dengan tcp
+
+![image](https://github.com/Caknoooo/information-security-be/assets/92671053/96eaedd9-bf5a-496d-b25c-5124f6deabb2)
 
 ## Soal 3
+> Kepala Suku North Area meminta kalian untuk membatasi DHCP dan DNS Server hanya dapat dilakukan ping oleh maksimal 3 device secara bersamaan, selebihnya akan di drop.
 
 ### Script 
 
+Untuk melakukan pembatasan jumlah koneksi, iptables dapat ditambahkan state yang dapat terkoneksi terlebih dahulu. Jenis state yang dapat terkoneksi adalah ``ESTABLISHED`` dan ``RELATED``.
+
+Selanjutnya, dengan memanfaatkan port icmp, dilakukan limit koneksi dengan ``--connlimit-above`` menggunakan parameter 3. Tidak lupa, gunakan mask 0 yang berarti semua akses akan masuk ke dalam filtering dari ``--connlimit``. Jika telah terdapat 3 koneksi, maka koneksi selanjutnya akan di-drop.
+
+```sh
+iptables -I INPUT -p icmp -m connlimit --connlimit-above 3 --connlimit-mask 0 -j DROP
+iptables -I INPUT -m state --state ESTABLISHED,RELATED -j ACCEPT
+```
+
+**Penjelasan**
+
+- ``-I INPUT``: Menyisipkan aturan ke awal chain INPUT.
+- ``-p icmp``: Menentukan protokol yang digunakan, dalam hal ini ICMP (Internet Control Message Protocol), yang sering digunakan untuk ping dan pesan kontrol jaringan.
+- ``-m connlimit``: Menggunakan modul connlimit untuk membatasi jumlah koneksi.
+-  ``--connlimit-above 3``: Menentukan batas atas jumlah koneksi yang diizinkan. Dalam hal ini, aturan ini akan mencoba membatasi jumlah koneksi ICMP di atas 3.
+- ``--connlimit-mask 0``: Menetapkan mask untuk mengidentifikasi koneksi. Dengan nilai 0, aturan ini akan membatasi jumlah koneksi berdasarkan alamat IP sumber.
+- ``--state ESTABLISHED,RELATED``: Menentukan bahwa aturan ini akan diterapkan pada paket yang terkait dengan koneksi yang sudah didirikan (ESTABLISHED) atau terkait dengan koneksi yang ada (RELATED), misalnya, paket tanggapan terkait permintaan koneksi.
+- ``-m state``: Menggunakan modul state untuk mengelola status koneksi.
+- ``-j DROP``: Menentukan tindakan yang diambil jika batasan koneksi terlampaui, dalam hal ini menolak (DROP) paket.
+
+Jadi, aturan ini akan menolak paket ICMP jika jumlah koneksi ICMP dari satu alamat IP melebihi 3. Aturan ini juga mengizinkan paket yang terkait dengan koneksi yang sudah didirikan atau terkait dengan koneksi yang ada untuk masuk ke sistem. Ini memastikan bahwa tanggapan dari koneksi yang sudah ada atau paket terkait dengan koneksi yang sudah didirikan diterima.
+
 ### Testing
+
+![image](https://github.com/Caknoooo/information-security-be/assets/92671053/e9f421d8-6fc2-437a-a8c6-dcf4babed9c9)
+
+Pada ``GrobeForest`` tidak berhasil melakukan ``ping`` karena ``Revolte`` sudah mencapat 3 koneksi.
 
 ## Soal 4
+> Lakukan pembatasan sehingga koneksi SSH pada Web Server hanya dapat dilakukan oleh masyarakat yang berada pada GrobeForest.
 
 ### Script 
+``koneksi SSH / port SSH: 22``
+Disini kami melakukan ``iptables`` untuk server yang bertugas sebagai ``Web Server`` yaitu node ``Sein`` dan ``Stark``. Pada node tersebut kami akan mengizinkan port ``22`` dan akan memberikan akses pada client ``GrobeForest``. Tetapi ``GrobeForest`` memiliki IP yang selalu berganti, dikarenakan ``GrobeForest`` mendapatkan IP dari ``DHCP Server``, dan IP tersebut berada di ``range 192.173.4.2 192.173.7.254``
+
+```sh
+iptables -A INPUT -p tcp --dport 22 -s 192.173.x.x -j ACCEPT
+iptables -A INPUT -p tcp --dport 22 -j DROP
+```
+
+**Penjelasan**
+- ``-A INPUT``: Menambahkan aturan ke chain INPUT (rantai yang digunakan untuk lalu lintas yang menuju ke sistem).
+- ``-p tcp``: Menentukan protokol yang digunakan, dalam hal ini TCP.
+- ``--dport 22``: Menentukan port tujuan, dalam hal ini port 22 (umumnya digunakan untuk layanan SSH).
+- ``-s 192.173.x.x``: Menentukan alamat sumber yang diizinkan. Dalam hal ini, hanya lalu lintas yang berasal dari alamat IP yang dimulai dengan 192.173.x.x yang diizinkan masuk.
+- ``-j ACCEPT``: Menentukan tindakan yang diambil jika paket memenuhi kriteria aturan, dalam hal ini menerima paket.
+- ``-j DROP``: Menentukan tindakan yang diambil jika paket memenuhi kriteria aturan, dalam hal ini menolak (DROP) paket.
+
+Jadi, aturan ini memungkinkan lalu lintas TCP yang menuju ke port 22 (SSH) dari alamat IP yang dimulai dengan 192.173.x.x untuk diterima. aturan ini menolak semua lalu lintas TCP yang menuju ke port 22 (SSH). Ini bertentangan dengan aturan sebelumnya yang mengizinkan lalu lintas SSH dari alamat IP tertentu. Oleh karena itu, aturan ini bersifat "penolakan umum" untuk lalu lintas SSH yang tidak sesuai dengan aturan pertama.
 
 ### Testing
+Disini kami akan melakukan ``testing`` dimana kami akan menggunakan ``GrobeForest`` -> Sukses dan ``TurkRegion`` -> Gagal
+
+**GrobeForest**
+
+![image](https://github.com/Caknoooo/information-security-be/assets/92671053/354beb06-285b-4f9d-bc10-c8200c03925f)
+
+**TurkRegion**
+
+![image](https://github.com/Caknoooo/information-security-be/assets/92671053/6b3027a3-18ef-4bc5-ae5c-5ebed92d539c)
 
 ## Soal 5
+> Selain itu, akses menuju WebServer hanya diperbolehkan saat jam kerja yaitu Senin-Jumat pada pukul 08.00-16.00.
 
 ### Script 
+Karena disini akan Webserver hanya dapat diakses pada jam kerja saja, dapat menggunakan bantuan ``time`` dan lebih spesifiknya membutuhkan command ``--weekdays`` untuk membaca hari masuk (Senin, Selasa, Rabu, Kamis, Jumat). Kita juga perlu untuk menggunakan ``timestart`` dan ``timeout`` untuk membatasi akses.
+
+```sh
+iptables -A INPUT -m time --timestart 08:00 --timestop 16:00 --weekdays Mon,Tue,Wed,Thu,Fri -j ACCEPT
+iptables -A INPUT -j REJECT
+```
+
+**Penjelasan**
+
+- ``-A INPUT``: Menambahkan aturan ke chain INPUT (rantai yang digunakan untuk lalu lintas yang menuju ke sistem).
+- ``-m time``: Menggunakan modul waktu untuk menentukan aturan berdasarkan waktu.
+- ``--timestart 08:00``: Menentukan waktu mulai, dalam hal ini pukul 08:00.
+- ``--timestop 16:00``: Menentukan waktu berakhir, dalam hal ini pukul 16:00.
+- ``--weekdays Mon,Tue,Wed,Thu,Fri``: Menentukan hari-hari di mana aturan ini berlaku, dalam hal ini Senin sampai Jumat.
+- ``-j ACCEPT``: Menentukan tindakan yang diambil jika paket memenuhi kriteria aturan, dalam hal ini menerima paket.
+- ``-j REJECT``: Menentukan tindakan yang diambil jika paket tidak memenuhi kriteria aturan, dalam hal ini menolak (REJECT) paket.
+
+Jadi, aturan ini memungkinkan lalu lintas masuk (INPUT) hanya pada rentang waktu antara pukul 08:00 hingga 16:00 pada hari Senin sampai Jumat. Aturan ini juga menolak semua lalu lintas yang tidak sesuai dengan aturan sebelumnya. Ini termasuk lalu lintas di luar rentang waktu atau pada hari yang tidak termasuk dalam Senin sampai Jumat.
 
 ### Testing
+**Note**: Jika jam / hari berbeda dengan rentang waktu yang telah di ``set`` sebelumnya, maka gunakan ``date --set="2023-12-13 14:00:00"``
+
+Disini kami akan melakukan testing `Sukses` dan `Gagal`
+
+**Sukses**
+
+![image](https://github.com/Caknoooo/information-security-be/assets/92671053/73de3c3e-0b28-4c54-b616-7c38abdec8a8)
+
+**Gagal**
+
+![image](https://github.com/Caknoooo/information-security-be/assets/92671053/f6a11ad2-228b-494c-a66e-c826440e1d0e)
 
 ## Soal 6
+> Lalu, karena ternyata terdapat beberapa waktu di mana network administrator dari WebServer tidak bisa stand by, sehingga perlu ditambahkan rule bahwa akses pada hari Senin - Kamis pada jam 12.00 - 13.00 dilarang (istirahat maksi cuy) dan akses di hari Jumat pada jam 11.00 - 13.00 juga dilarang (maklum, Jumatan rek).
 
 ### Script 
 
 ### Testing
 
 ## Soal 7
+> Karena terdapat 2 WebServer, kalian diminta agar setiap client yang mengakses Sein dengan Port 80 akan didistribusikan secara bergantian pada Sein dan Stark secara berurutan dan request dari client yang mengakses Stark dengan port 443 akan didistribusikan secara bergantian pada Sein dan Stark secara berurutan.
 
 ### Script 
 
 ### Testing
 
 ## Soal 8
+> Karena berbeda koalisi politik, maka subnet dengan masyarakat yang berada pada Revolte dilarang keras mengakses WebServer hingga masa pencoblosan pemilu kepala suku 2024 berakhir. Masa pemilu (hingga pemungutan dan penghitungan suara selesai) kepala suku bersamaan dengan masa pemilu Presiden dan Wakil Presiden Indonesia 2024
 
 ### Script 
 
 ### Testing
 
 ## Soal 9
+> Sadar akan adanya potensial saling serang antar kubu politik, maka WebServer harus dapat secara otomatis memblokir  alamat IP yang melakukan scanning port dalam jumlah banyak (maksimal 20 scan port) di dalam selang waktu 10 menit. (clue: test dengan nmap)
+
 
 ### Script 
 
 ### Testing
 
 ## Soal 10
+> Karena kepala suku ingin tau paket apa saja yang di-drop, maka di setiap node server dan router ditambahkan logging paket yang di-drop dengan standard syslog level. 
 
 ### Script 
 

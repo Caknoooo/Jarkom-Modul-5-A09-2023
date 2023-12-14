@@ -70,3 +70,7 @@ iptables -A PREROUTING -t nat -p tcp --dport 443 -d 192.173.1.118 -j DNAT --to-d
 # --packet 0 -> Mengatur urutan distribusi request
 # --to-destination -> Mengatur ip tujuan
 
+# Soal 8 ()
+# Karena berbeda koalisi politik, maka subnet dengan masyarakat yang berada pada Revolte dilarang keras mengakses WebServer hingga masa pencoblosan pemilu kepala suku 2024 berakhir. Masa pemilu (hingga pemungutan dan penghitungan suara selesai) kepala suku bersamaan dengan masa pemilu Presiden dan Wakil Presiden Indonesia 2024.
+iptables -A INPUT -p tcp --dport 80 -s 192.173.4.2 -m time --datestart 2024-02-14 --datestop 2024-06-26 -j REJECT
+iptables -A INPUT -p tcp --dport 443 -s 192.173.4.2 -m time --datestart 2024-02-14 --datestop 2024-06-26 -j REJECT
