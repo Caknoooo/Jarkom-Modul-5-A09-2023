@@ -26,3 +26,6 @@ Listen 443
 
 echo '# Sein | Stark
 Sein | Stark nih' > /var/www/html/index.html
+
+echo 'Sein' > /var/www/html/index.html
+echo 'Stark' > /var/www/html/index.html

@@ -58,10 +58,15 @@ iptables -A INPUT -m time --timestart 11:00 --timestop 13:00 --weekdays Fri -j R
 # Soal 7 ()
 # Karena terdapat 2 WebServer, kalian diminta agar setiap client yang mengakses Sein dengan Port 80 akan didistribusikan secara bergantian pada Sein dan Stark secara berurutan dan request dari client yang mengakses Stark dengan port 443 akan didistribusikan secara bergantian pada Sein dan Stark secara berurutan.
 
+# Fail
 iptables -A PREROUTING -t nat -p tcp --dport 80 -d 192.173.4.2 -m statistic --mode nth --every 2 --packet 0 -j DNAT --to-destination 192.173.4.2:80
 iptables -A PREROUTING -t nat -p tcp --dport 80 -d 192.173.4.2 -j DNAT --to-destination 192.173.1.118:80
 iptables -A PREROUTING -t nat -p tcp --dport 443 -d 192.173.1.118 -m statistic --mode nth --every 2 --packet 0 -j DNAT --to-destination 192.173.1.118:443
 iptables -A PREROUTING -t nat -p tcp --dport 443 -d 192.173.1.118 -j DNAT --to-destination 192.173.4.2:443
+
+# Fail
+iptables -A PREROUTING -t nat -p tcp --dport 80 -d 192.173.4.2 -m statistic --mode nth --every 2 --packet 0 -j DNAT --to-destination 192.173.1.118:80
+iptables -A PREROUTING -t nat -p tcp --dport 443 -d 192.173.1.118 -m statistic --mode nth --every 2 --packet 0 -j DNAT --to-destination 192.173.4.2:443 
 
 # Penjelasan 
 # --dport 80 -> Port 80
@@ -73,4 +78,7 @@ iptables -A PREROUTING -t nat -p tcp --dport 443 -d 192.173.1.118 -j DNAT --to-d
 # Soal 8 ()
 # Karena berbeda koalisi politik, maka subnet dengan masyarakat yang berada pada Revolte dilarang keras mengakses WebServer hingga masa pencoblosan pemilu kepala suku 2024 berakhir. Masa pemilu (hingga pemungutan dan penghitungan suara selesai) kepala suku bersamaan dengan masa pemilu Presiden dan Wakil Presiden Indonesia 2024.
 iptables -A INPUT -p tcp --dport 80 -s 192.173.4.2 -m time --datestart 2024-02-14 --datestop 2024-06-26 -j REJECT
-iptables -A INPUT -p tcp --dport 443 -s 192.173.4.2 -m time --datestart 2024-02-14 --datestop 2024-06-26 -j REJECT
+
+iptables -A INPUT -p tcp -s 192.173.1.106/30 --dport 80 -m time --datestart 2024-02-14 --datestop 2024-06-26 -j DROP
+# Test dengan menggunakan nmap
+# nmap -p 80

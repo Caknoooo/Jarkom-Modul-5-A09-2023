@@ -665,10 +665,37 @@ Disini kami akan melakukan testing `Sukses` dan `Gagal`
 ## Soal 6
 > Lalu, karena ternyata terdapat beberapa waktu di mana network administrator dari WebServer tidak bisa stand by, sehingga perlu ditambahkan rule bahwa akses pada hari Senin - Kamis pada jam 12.00 - 13.00 dilarang (istirahat maksi cuy) dan akses di hari Jumat pada jam 11.00 - 13.00 juga dilarang (maklum, Jumatan rek).
 
-### Script 
+### Script
+Untuk membatasi waktu koneksi, ``iptables`` pada Web Server (Sein dan Stark) perlu dilakukan pendefinisian pada hari yang dapat terkoneksi atau dapat di ``drop``. Karena disini kita akan melakukan ``blok`` pada jam istirahat *weekdays* pada hari ``Senin - Kamis`` pukul ``12.00 - 13.00`` dan ``11.00 - 13.00`` pada hari ``jum'at``. Dapat menggunakan command sebagai berikut
+
+```sh 
+iptables -A INPUT -m time --timestart 12:00 --timestop 13:00 --weekdays Mon,Tue,Wed,Thu -j REJECT
+iptables -A INPUT -m time --timestart 11:00 --timestop 13:00 --weekdays Fri -j REJECT
+```
+
+- ``-A INPUT``: Menambahkan aturan ke chain INPUT (rantai yang digunakan untuk lalu lintas yang menuju ke sistem).
+- ``-m time``: Menggunakan modul waktu untuk menentukan aturan berdasarkan waktu.
+- ``--timestart 12:00``: Menentukan waktu mulai, dalam hal ini pukul 12:00.
+- ``--timestop 13:00``: Menentukan waktu berakhir, dalam hal ini pukul 13:00.
+- ``--weekdays Mon,Tue,Wed,Thu``: Menentukan hari-hari di mana aturan ini berlaku, dalam hal ini Senin sampai Kamis.
+- ``--timestart 11:00``: Menentukan waktu mulai, dalam hal ini pukul 11:00.
+- ``--timestop 13:00``: Menentukan waktu berakhir, dalam hal ini pukul 13:00.
+- ``--weekdays Fri``: Menentukan hari di mana aturan ini berlaku, dalam hal ini Jumat.
+- ``-j REJECT``: Menentukan tindakan yang diambil jika paket memenuhi kriteria aturan, dalam hal ini menolak (REJECT) paket.
+
+Jadi, aturan ini menolak lalu lintas INPUT pada hari Senin sampai Kamis antara pukul 12:00 dan 13:00. Aturan ini juga menolak lalu lintas INPUT pada hari Jumat antara pukul 11:00 dan 13:00.
 
 ### Testing
+Pada testing kali ini kami akan mencoba untuk melakukan pada waktu yang telah ditentukan (Gagal) dan waktu yang ``available`` untuk mengakses ``Web Server``
 
+**Sukses**
+
+![image](https://github.com/Caknoooo/information-security-be/assets/92671053/41d20fa3-486b-4463-bb15-55d6c950db0c)
+
+**Gagal**
+
+![image](https://github.com/Caknoooo/information-security-be/assets/92671053/1d1063f3-7a21-4b57-96e1-f37525a2c69d)
+ 
 ## Soal 7
 > Karena terdapat 2 WebServer, kalian diminta agar setiap client yang mengakses Sein dengan Port 80 akan didistribusikan secara bergantian pada Sein dan Stark secara berurutan dan request dari client yang mengakses Stark dengan port 443 akan didistribusikan secara bergantian pada Sein dan Stark secara berurutan.
 
