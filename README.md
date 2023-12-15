@@ -707,16 +707,82 @@ Pada testing kali ini kami akan mencoba untuk melakukan pada waktu yang telah di
 > Karena berbeda koalisi politik, maka subnet dengan masyarakat yang berada pada Revolte dilarang keras mengakses WebServer hingga masa pencoblosan pemilu kepala suku 2024 berakhir. Masa pemilu (hingga pemungutan dan penghitungan suara selesai) kepala suku bersamaan dengan masa pemilu Presiden dan Wakil Presiden Indonesia 2024
 
 ### Script 
+Untuk mengerjakan nomor ini diperlukan bantuan ``--datestart`` dan ``--datestop`` untuk melakukan pembatasan akses pada hari-hari tertentu. Disini diperlukan ``subnet`` dari ``Revolte`` karena pembatasn yang diinginkan adalah terhadap subnet. Disini ``subnet`` kami adalah terdapat pada ``A10`` dimana memiliki ip ``192.173.1.104/30`` dan menentukan protokol yang digunakan sebagai berikut 
+
+```sh
+iptables -A INPUT -p tcp --dport 80 -s 192.173.1.104/30 -m time --datestart 2023-12-10 --datestop 2024-02-15 -j DROP
+```
+
+**Penjelasan**
+- ``-A INPUT``: Menambahkan aturan ke chain INPUT (rantai yang digunakan untuk lalu lintas yang menuju ke sistem).
+- ``-p tcp``: Menentukan protokol yang digunakan, dalam hal ini TCP.
+- ``--dport 80``: Menentukan port tujuan, dalam hal ini port 80 (umumnya digunakan untuk layanan HTTP).
+- ``-s 192.173.1.104/30``: Menentukan alamat sumber yang diizinkan. Dalam hal ini, hanya lalu lintas yang berasal dari rentang IP 192.173.1.104 hingga 192.173.1.107 (192.173.1.104/30) yang diizinkan masuk.
+- ``-m time --datestart 2023-12-10 --datestop 2024-02-15``: Menggunakan modul waktu untuk menentukan aturan berdasarkan tanggal. Aturan ini akan berlaku mulai dari tanggal 10 Desember 2023 hingga 15 Februari 2024.
+- ``-j DROP``: Menentukan tindakan yang diambil jika paket memenuhi kriteria aturan, dalam hal ini menolak (DROP) paket.
 
 ### Testing
 
 ## Soal 9
 > Sadar akan adanya potensial saling serang antar kubu politik, maka WebServer harus dapat secara otomatis memblokir  alamat IP yang melakukan scanning port dalam jumlah banyak (maksimal 20 scan port) di dalam selang waktu 10 menit. (clue: test dengan nmap)
 
-
 ### Script 
+Karena pada soal 9 ini kita diperlukan untuk menggunakan *scanning port* maka diperlukan rantai khusus bernama ``portscan``. Rantai ini nantinya dapat digunakan untuk mengelola aturan-aturan terkait dengan deteksi port scanning.
+
+```sh
+iptables -N portscan
+
+iptables -A INPUT -m recent --name portscan --update --seconds 600 --hitcount 20 -j DROP
+iptables -A FORWARD -m recent --name portscan --update --seconds 600 --hitcount 20 -j DROP
+
+iptables -A INPUT -m recent --name portscan --set -j ACCEPT
+iptables -A FORWARD -m recent --name portscan --set -j ACCEPT
+```
+
+**Penjelasan**
+
+- ``iptables -N portscan``: Ini membuat rantai khusus bernama portscan. Rantai ini nantinya dapat digunakan untuk mengelola aturan-aturan terkait dengan deteksi port scanning.
+
+```sh
+iptables -A INPUT -m recent --name portscan --update --seconds 600 --hitcount 20 -j DROP
+```
+- ``-m recent --name portscan``: Menggunakan modul recent untuk melacak koneksi atau paket.
+- ``--update``: Mengupdate informasi tentang paket terkini.
+- ``--seconds 600``: Menetapkan waktu dalam detik, dalam hal ini 600 detik (10 menit).
+- ``--hitcount 20``: Menetapkan jumlah hit (pembaruan) yang diperlukan untuk memicu aksi selanjutnya.
+- ``-j DROP``: Menentukan tindakan yang diambil jika kriteria aturan terpenuhi, dalam hal ini menolak (DROP) paket.
+
+Jadi, aturan ini akan menolak paket INPUT jika lebih dari 20 pembaruan terjadi dalam jangka waktu 10 menit, yang dapat dianggap sebagai tanda serangan port scanning.
+
+```sh 
+iptables -A FORWARD -m recent --name portscan --update --seconds 600 --hitcount 20 -j DROP
+```
+- Menambahkan aturan ke chain FORWARD.
+- Mirip dengan aturan sebelumnya, aturan ini menangani paket yang melewati sistem, yaitu paket yang di-forward. Jika jumlah pembaruan paket melebihi 20 dalam 10 menit, paket akan ditolak.
+
+```sh
+iptables -A INPUT -m recent --name portscan --set -j ACCEPT
+```
+
+- ``-m recent --name portscan``: Menggunakan modul recent untuk melacak koneksi atau paket.
+- ``--set``: Menetapkan informasi terkait dengan paket baru.
+- ``-j ACCEPT``: Menentukan tindakan yang diambil jika paket memenuhi kriteria aturan, dalam hal ini menerima paket.
+
+Jadi, aturan ini memungkinkan paket INPUT baru untuk melewati dan menetapkan informasi bahwa paket ini tidak terkait dengan serangan port scanning.
+
+```sh
+iptables -A FORWARD -m recent --name portscan --set -j ACCEPT
+```
+
+- Menambahkan aturan ke chain FORWARD.
+- Mirip dengan aturan sebelumnya, aturan ini memungkinkan paket yang di-forward untuk melewati dan menetapkan informasi bahwa paket ini tidak terkait dengan serangan port scanning.
 
 ### Testing
+Untuk melakukan testing, kami menggunakan ``ping`` terhadap ``Web Server`` yaitu ``Sein`` 
+
+![image](https://github.com/Caknoooo/information-security-be/assets/92671053/5f2f77a5-5d50-4e2b-ae7f-7ebdf1693a67)
+
+Disaat ``packet`` yang telah terkirim lebih dari 20, maka ``packet`` selanjutnya akan langsung di ``drop``.
 
 ## Soal 10
 > Karena kepala suku ingin tau paket apa saja yang di-drop, maka di setiap node server dan router ditambahkan logging paket yang di-drop dengan standard syslog level. 

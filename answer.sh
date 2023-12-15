@@ -75,10 +75,24 @@ iptables -A PREROUTING -t nat -p tcp --dport 443 -d 192.173.1.118 -m statistic -
 # --packet 0 -> Mengatur urutan distribusi request
 # --to-destination -> Mengatur ip tujuan
 
-# Soal 8 ()
+# Soal 8 (Sein dan Stark)
 # Karena berbeda koalisi politik, maka subnet dengan masyarakat yang berada pada Revolte dilarang keras mengakses WebServer hingga masa pencoblosan pemilu kepala suku 2024 berakhir. Masa pemilu (hingga pemungutan dan penghitungan suara selesai) kepala suku bersamaan dengan masa pemilu Presiden dan Wakil Presiden Indonesia 2024.
-iptables -A INPUT -p tcp --dport 80 -s 192.173.4.2 -m time --datestart 2024-02-14 --datestop 2024-06-26 -j REJECT
+iptables -A INPUT -p tcp --dport 80 -s 192.173.1.104/30 -m time --datestart 2023-12-10 --datestop 2024-02-15 -j DROP
 
-iptables -A INPUT -p tcp -s 192.173.1.106/30 --dport 80 -m time --datestart 2024-02-14 --datestop 2024-06-26 -j DROP
 # Test dengan menggunakan nmap
-# nmap -p 80
+# nmap 192.173.4.2 80 (Revolte) -> Failed (Connection Refused) Selama masa pemilu
+# nmap 192.173.4.2 80 (Revolte) -> Success (Open) Setelah atau sebelum masa pemilu
+# nmap 192.173.4.2 80 (GrobeForest) -> Success (Open) Selama masa pemilu
+
+# Soal 9 (Sein dan Stark)
+# Sadar akan adanya potensial saling serang antar kubu politik, maka WebServer harus dapat secara otomatis memblokir  alamat IP yang melakukan scanning port dalam jumlah banyak (maksimal 20 scan port) di dalam selang waktu 10 menit.  (clue: test dengan nmap)
+iptables -N portscan
+
+iptables -A INPUT -m recent --name portscan --update --seconds 600 --hitcount 20 -j DROP
+iptables -A FORWARD -m recent --name portscan --update --seconds 600 --hitcount 20 -j DROP
+
+iptables -A INPUT -m recent --name portscan --set -j ACCEPT
+iptables -A FORWARD -m recent --name portscan --set -j ACCEPT
+
+# Test dengan menggunakan ping
+# ping 192.173.4.2 (Sein) -> Dari client 
