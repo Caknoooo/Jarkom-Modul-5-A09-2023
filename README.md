@@ -699,9 +699,69 @@ Pada testing kali ini kami akan mencoba untuk melakukan pada waktu yang telah di
 ## Soal 7
 > Karena terdapat 2 WebServer, kalian diminta agar setiap client yang mengakses Sein dengan Port 80 akan didistribusikan secara bergantian pada Sein dan Stark secara berurutan dan request dari client yang mengakses Stark dengan port 443 akan didistribusikan secara bergantian pada Sein dan Stark secara berurutan.
 
-### Script 
+### Script
+Untuk mengerjakan soal 7 ini diperlukan untuk melakukan setup ``web server`` terlebih dahulu. Pertama diperlukan untuk melakukan ``konfigurasi`` terhadap ``ports.conf`` sebagai berikut
+
+```sh
+echo '
+Listen 80
+Listen 443
+
+<IfModule ssl_module>
+        Listen 443
+</IfModule>
+
+<IfModule mod_gnutls.c>
+        Listen 443
+</IfModule>
+' > /etc/apache2/ports.conf
+```
+
+Lalu buat page atau ``inisialisasi`` sederhana yang menandakan bahwa merupakan pesan dari ``node`` tersebut
+```sh
+echo '# Sein | Stark
+Sein | Stark nih' > /var/www/html/index.html
+```
+
+Setelah mengizinkan ``port https``, sekarang saatnya melakukan konfigurasi dengan membuat web server sederhana sebagai berikut 
+
+```sh
+echo "
+<VirtualHost *:80>
+    ServerName 192.173.4.2
+    DocumentRoot /var/www/html
+    ErrorLog \${APACHE_LOG_DIR}/error.log
+    CustomLog \${APACHE_LOG_DIR}/access.log combined
+</VirtualHost>
+<VirtualHost *:443>
+    ServerName 192.173.4.2
+    DocumentRoot /var/www/html
+    ErrorLog \${APACHE_LOG_DIR}/error.log
+    CustomLog \${APACHE_LOG_DIR}/access.log combined
+</VirtualHost>
+" > /etc/apache2/sites-available/sein.conf
+
+a2ensite sein.conf
+service apache2 restart
+```
+
+Setelah itu lakukan ``iptables`` pada ``router`` yang mengarah pada ``web server`` yaitu sein dan stark sebagai berikut
+```sh
+iptables -A PREROUTING -t nat -p tcp --dport 80 -d 192.173.4.2 -m statistic --mode nth --every 2 --packet 0 -j DNAT --to-destination 192.173.4.2:80
+iptables -A PREROUTING -t nat -p tcp --dport 80 -d 192.173.4.2 -j DNAT --to-destination 192.173.1.118:80
+iptables -A PREROUTING -t nat -p tcp --dport 443 -d 192.173.1.118 -m statistic --mode nth --every 2 --packet 0 -j DNAT --to-destination 192.173.1.118:443
+iptables -A PREROUTING -t nat -p tcp --dport 443 -d 192.173.1.118 -j DNAT --to-destination 192.173.4.2:443
+```
 
 ### Testing
+Untuk melakukan ``testing`` hanya perlu melakukan command seperti berikut
+
+```sh
+curl 192.173.4.2:80
+curl 192.173.1.118:443
+```
+
+![image](https://github.com/Caknoooo/Jarkom-Modul-5-A09-2023/assets/92671053/a9d2e625-84c9-4ab5-864a-9f5a282edfc4)
 
 ## Soal 8
 > Karena berbeda koalisi politik, maka subnet dengan masyarakat yang berada pada Revolte dilarang keras mengakses WebServer hingga masa pencoblosan pemilu kepala suku 2024 berakhir. Masa pemilu (hingga pemungutan dan penghitungan suara selesai) kepala suku bersamaan dengan masa pemilu Presiden dan Wakil Presiden Indonesia 2024
@@ -722,6 +782,17 @@ iptables -A INPUT -p tcp --dport 80 -s 192.173.1.104/30 -m time --datestart 2023
 - ``-j DROP``: Menentukan tindakan yang diambil jika paket memenuhi kriteria aturan, dalam hal ini menolak (DROP) paket.
 
 ### Testing
+testing dengan menggunakan ``client``
+
+![image](https://github.com/Caknoooo/Jarkom-Modul-5-A09-2023/assets/92671053/259b6c8a-a1cb-4c8a-aee1-d1ac3832c015)
+
+testing dengan menggunakan ``revolte`` dimana sudah diakukan pemblokan
+
+![image](https://github.com/Caknoooo/Jarkom-Modul-5-A09-2023/assets/92671053/6c0cfc43-12b2-40ca-b970-b792dae8f8b7)
+
+testing dengan menggunkan ``revote`` tetapi di waktu yang diizinkan
+
+![image](https://github.com/Caknoooo/Jarkom-Modul-5-A09-2023/assets/92671053/14a9eb76-14a3-4bb9-9b19-85aa97ea4447)
 
 ## Soal 9
 > Sadar akan adanya potensial saling serang antar kubu politik, maka WebServer harus dapat secara otomatis memblokir  alamat IP yang melakukan scanning port dalam jumlah banyak (maksimal 20 scan port) di dalam selang waktu 10 menit. (clue: test dengan nmap)

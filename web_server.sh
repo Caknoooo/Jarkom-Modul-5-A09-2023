@@ -7,10 +7,7 @@ apt install netcat -y
 apt install apache2 -y
 service apache2 start
 
-echo '# If you just change the port or add more ports here, you will likely also
-# have to change the VirtualHost statement in
-# /etc/apache2/sites-enabled/000-default.conf
-
+echo '
 Listen 80
 Listen 443
 
@@ -21,8 +18,25 @@ Listen 443
 <IfModule mod_gnutls.c>
         Listen 443
 </IfModule>
+' > /etc/apache2/ports.conf
 
-# vim: syntax=apache ts=4 sw=4 sts=4 sr noet' > /etc/apache2/ports.conf
+echo "
+<VirtualHost *:80>
+    ServerName 192.173.4.2
+    DocumentRoot /var/www/html
+    ErrorLog \${APACHE_LOG_DIR}/error.log
+    CustomLog \${APACHE_LOG_DIR}/access.log combined
+</VirtualHost>
+<VirtualHost *:443>
+    ServerName 192.173.4.2
+    DocumentRoot /var/www/html
+    ErrorLog \${APACHE_LOG_DIR}/error.log
+    CustomLog \${APACHE_LOG_DIR}/access.log combined
+</VirtualHost>
+" > /etc/apache2/sites-available/sein.conf
+
+a2ensite sein.conf
+service apache2 restart
 
 echo '# Sein | Stark
 Sein | Stark nih' > /var/www/html/index.html
