@@ -41,19 +41,16 @@ iptables -A INPUT -j REJECT
 # Cara cek jam di linux -> date
 # Cara mengganti jam di linux -> date --set="2023-12-13 17:00:00"
 
-# Soal 6 (Sein dan Stark)
+# Soal 6 (Sein dan Stark) FIXED
 # Lalu, karena ternyata terdapat beberapa waktu di mana network administrator dari WebServer tidak bisa stand by, sehingga perlu ditambahkan rule bahwa akses pada hari Senin - Kamis pada jam 12.00 - 13.00 dilarang (istirahat maksi cuy) dan akses di hari Jumat pada jam 11.00 - 13.00 juga dilarang (maklum, Jumatan rek).
-iptables -A INPUT -m time --timestart 12:00 --timestop 13:00 --weekdays Mon,Tue,Wed,Thu -j REJECT
-iptables -A INPUT -m time --timestart 11:00 --timestop 13:00 --weekdays Fri -j REJECT
+iptables -I INPUT 3 -m time --timestart 12:00 --timestop 13:00 --weekdays Mon,Tue,Wed,Thu -j REJECT
+iptables -I INPUT 4 -m time --timestart 11:00 --timestop 13:00 --weekdays Fri -j REJECT
 
 # Test dengan menggunakan ping
 # ping 192.173.4.2 (Sein) -> Success (Jam Kerja)
 # ping 192.173.4.2 (Sein) -> Failed (Bukan Jam Kerja)
 # Cara cek jam di linux -> date
 # Cara mengganti jam di linux -> date --set="2023-12-13 17:00:00"
-# Problem -> Harusnya di reject, tapi masih bisa ping karena ada rule di soal 5 yang masih bisa diakses
-# Solusi -> Ganti rule di soal 5 menjadi REJECT
-# command -> iptables -D INPUT 1 ??? (not fixed yet)
 
 # Soal 7 ()
 # Karena terdapat 2 WebServer, kalian diminta agar setiap client yang mengakses Sein dengan Port 80 akan didistribusikan secara bergantian pada Sein dan Stark secara berurutan dan request dari client yang mengakses Stark dengan port 443 akan didistribusikan secara bergantian pada Sein dan Stark secara berurutan.
