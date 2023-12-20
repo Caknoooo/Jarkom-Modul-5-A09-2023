@@ -87,4 +87,9 @@ iptables -A INPUT -m recent --name portscan --set -j ACCEPT
 iptables -A FORWARD -m recent --name portscan --set -j ACCEPT
 
 # Test dengan menggunakan ping
-# ping 192.173.4.2 (Sein) -> Dari client 
+# ping 192.173.4.2 (Sein) -> Dari client
+
+# Soal 10 
+iptables -I INPUT -m recent --name portscan --update --seconds 600 --hitcount 20 -j LOG --log-prefix "Portscan detected: " --log-level 4
+
+iptables -I FORWARD -m recent --name portscan --update --seconds 600 --hitcount 20 -j LOG --log-prefix "Portscan detected: " --log-level 4
